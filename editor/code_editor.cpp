@@ -1437,22 +1437,26 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 
 		// Check if all lines in the selected block are commented.
 		bool is_commented = true;
+
 		for (int i = begin; i <= end; i++) {
-			if (!text_editor->get_line(i).begins_with(delimiter)) {
+			// `+ delimiter.length()` here because comment delimiter is not actually `in comment` so we check first character after it
+			int delimiter_idx = text_editor->is_in_comment(i, text_editor->get_first_non_whitespace_column(i) + delimiter.length());
+			if (delimiter_idx == -1 || text_editor->get_delimiter_start_key(delimiter_idx) != delimiter) {
 				is_commented = false;
 				break;
 			}
 		}
+
+		// Add or remove delimiter
 		for (int i = begin; i <= end; i++) {
 			String line_text = text_editor->get_line(i);
-
 			if (line_text.strip_edges().is_empty()) {
 				line_text = delimiter;
 			} else {
 				if (is_commented) {
-					line_text = line_text.substr(delimiter.length(), line_text.length());
+					line_text = line_text.replace_first(delimiter, "");
 				} else {
-					line_text = delimiter + line_text;
+					line_text = line_text.insert(text_editor->get_first_non_whitespace_column(i), delimiter);
 				}
 			}
 			text_editor->set_line(i, line_text);
@@ -1483,11 +1487,13 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 		int delimiter_length = delimiter.length();
 
 		int col = text_editor->get_caret_column();
-		if (line_text.begins_with(delimiter)) {
-			line_text = line_text.substr(delimiter_length, line_text.length());
+		// `+ delimiter_length` here because comment delimiter is not actually `in comment` so we check first character after it
+		int delimiter_idx = text_editor->is_in_comment(begin, text_editor->get_first_non_whitespace_column(begin) + delimiter_length);
+		if (delimiter_idx != -1 && text_editor->get_delimiter_start_key(delimiter_idx) == delimiter) {
+			line_text = line_text.replace_first(delimiter, "");
 			col -= delimiter_length;
 		} else {
-			line_text = delimiter + line_text;
+			line_text = line_text.insert(text_editor->get_first_non_whitespace_column(begin), delimiter);
 			col += delimiter_length;
 		}
 
