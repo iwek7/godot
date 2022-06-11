@@ -818,6 +818,7 @@ void LineEdit::_notification(int p_what) {
 				font_color = get_theme_color(SNAME("font_placeholder_color"));
 			}
 
+			// Draw right icon
 			bool display_clear_icon = !using_placeholder && is_editable() && clear_button_enabled;
 			if (right_icon.is_valid() || display_clear_icon) {
 				Ref<Texture2D> r_icon = display_clear_icon ? Control::get_theme_icon(SNAME("clear")) : right_icon;
@@ -872,14 +873,14 @@ void LineEdit::_notification(int p_what) {
 				Vector2 oofs = ofs;
 				for (int i = 0; i < gl_size; i++) {
 					for (int j = 0; j < glyphs[i].repeat; j++) {
-						if (ceil(oofs.x) >= x_ofs && (oofs.x + glyphs[i].advance) <= ofs_max) {
+						if (ceil(oofs.x) >= x_ofs && (oofs.x + glyphs[i].advance) <= ofs_max  + style->get_margin(SIDE_LEFT)) {
 							if (glyphs[i].font_rid != RID()) {
 								TS->font_draw_glyph_outline(glyphs[i].font_rid, ci, glyphs[i].font_size, outline_size, oofs + Vector2(glyphs[i].x_off, glyphs[i].y_off), glyphs[i].index, font_outline_color);
 							}
 						}
 						oofs.x += glyphs[i].advance;
 					}
-					if (oofs.x >= ofs_max) {
+					if (oofs.x >= ofs_max + style->get_margin(SIDE_LEFT)) {
 						break;
 					}
 				}
@@ -887,7 +888,7 @@ void LineEdit::_notification(int p_what) {
 			for (int i = 0; i < gl_size; i++) {
 				bool selected = selection.enabled && glyphs[i].start >= selection.begin && glyphs[i].end <= selection.end;
 				for (int j = 0; j < glyphs[i].repeat; j++) {
-					if (ceil(ofs.x) >= x_ofs && (ofs.x + glyphs[i].advance) <= ofs_max) {
+					if (ceil(ofs.x) >= x_ofs && (ofs.x + glyphs[i].advance) <= ofs_max  + style->get_margin(SIDE_LEFT)) {
 						if (glyphs[i].font_rid != RID()) {
 							TS->font_draw_glyph(glyphs[i].font_rid, ci, glyphs[i].font_size, ofs + Vector2(glyphs[i].x_off, glyphs[i].y_off), glyphs[i].index, selected ? font_selected_color : font_color);
 						} else if ((glyphs[i].flags & TextServer::GRAPHEME_IS_VIRTUAL) != TextServer::GRAPHEME_IS_VIRTUAL) {
@@ -896,7 +897,7 @@ void LineEdit::_notification(int p_what) {
 					}
 					ofs.x += glyphs[i].advance;
 				}
-				if (ofs.x >= ofs_max) {
+				if (ofs.x >= ofs_max  + style->get_margin(SIDE_LEFT)) {
 					break;
 				}
 			}
