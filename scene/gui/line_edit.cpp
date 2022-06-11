@@ -913,6 +913,8 @@ void LineEdit::_notification(int p_what) {
 			ofs.y += TS->shaped_text_get_ascent(text_rid);
 			Color font_outline_color = theme_cache.font_outline_color;
 			int outline_size = theme_cache.font_outline_size;
+			ofs_max += style->get_margin(SIDE_LEFT);
+
 			if (outline_size > 0 && font_outline_color.a > 0) {
 				Vector2 oofs = ofs;
 				for (int i = 0; i < gl_size; i++) {
