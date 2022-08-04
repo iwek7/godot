@@ -1717,30 +1717,67 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 			color_position.x = row;
 			color_position.y = col;
 
-			int begin = 0;
-			int end = 0;
-			bool valid = false;
+			int begin = -1;
+			int end = -1;
+			int expression_pattern = 0;
 			for (int i = col; i < line.length(); i++) {
 				if (line[i] == '(') {
-					begin = i;
-					continue;
-				} else if (line[i] == ')') {
+					if (expression_pattern == 0) {
+						begin = i;
+						expression_pattern = 1;
+					} else {
+						// '(' appearing twice
+						expression_pattern = 0;
+
+						break;
+					}
+				} else if (expression_pattern == 1 && line[i] == ')' && end < 0) {
 					end = i + 1;
-					valid = true;
+
+					break;
+				} else if (expression_pattern == 0 && line[i] == '.') {
+					begin = i;
+					expression_pattern = 2;
+				} else if (expression_pattern == 2 && end < 0 && (line[i] == ' ' || line[i] == '\t')) {
+					// including '.' and spaces
+					continue;
+				} else if (expression_pattern == 2 && !(line[i] == '_' || ('A' <= line[i] && line[i] <= 'Z'))) { // Godot4.x color constant style
+					end = i;
+
 					break;
 				}
 			}
-			if (valid) {
-				color_args = line.substr(begin, end - begin);
-				String stripped = color_args.replace(" ", "").replace("(", "").replace(")", "");
-				Vector<float> color = stripped.split_floats(",");
-				if (color.size() > 2) {
-					float alpha = color.size() > 3 ? color[3] : 1.0f;
-					color_picker->set_pick_color(Color(color[0], color[1], color[2], alpha));
-				}
+
+			switch (expression_pattern) {
+				case 1: { // Color(float,float,float) or Color(float,float,float,float)
+					color_args = line.substr(begin, end - begin);
+					String stripped = color_args.replace(" ", "").replace("\t", "").replace("(", "").replace(")", "");
+					Vector<float> color = stripped.split_floats(",");
+					if (color.size() > 2) {
+						float alpha = color.size() > 3 ? color[3] : 1.0f;
+						color_picker->set_pick_color(Color(color[0], color[1], color[2], alpha));
+					}
+				} break;
+				case 2: { // Color.COLOR_NAME
+					if (end < 0) {
+						end = line.length();
+					}
+					color_args = line.substr(begin, end - begin);
+					const String color_name = color_args.replace(" ", "").replace("\t", "").replace(".", "");
+					const int color_index = Color::find_named_color(color_name);
+					if (0 <= color_index) {
+						const Color color_constant = Color::get_named_color(color_index);
+						color_picker->set_pick_color(color_constant);
+					} else {
+						has_color = false;
+					}
+				} break;
+				default:
+					has_color = false;
+					break;
+			}
+			if (has_color) {
 				color_panel->set_position(get_screen_position() + local_pos);
-			} else {
-				has_color = false;
 			}
 		}
 		_make_context_menu(tx->has_selection(), has_color, foldable, open_docs, goto_definition, local_pos);
