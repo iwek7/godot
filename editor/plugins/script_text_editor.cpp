@@ -1719,29 +1719,33 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 
 			int begin = -1;
 			int end = -1;
-			int expression_pattern = 0;
+			enum EXPRESSION_PATTERNS {
+				NOT_PARSED,
+				RGBA_PARAMETER, // Color(float,float,float) or Color(float,float,float,float)
+				COLOR_NAME, // Color.COLOR_NAME
+			} expression_pattern = NOT_PARSED;
 			for (int i = col; i < line.length(); i++) {
 				if (line[i] == '(') {
-					if (expression_pattern == 0) {
+					if (expression_pattern == NOT_PARSED) {
 						begin = i;
-						expression_pattern = 1;
+						expression_pattern = RGBA_PARAMETER;
 					} else {
-						// '(' appearing twice
-						expression_pattern = 0;
+						// method call or '(' appearing twice
+						expression_pattern = NOT_PARSED;
 
 						break;
 					}
-				} else if (expression_pattern == 1 && line[i] == ')' && end < 0) {
+				} else if (expression_pattern == RGBA_PARAMETER && line[i] == ')' && end < 0) {
 					end = i + 1;
 
 					break;
-				} else if (expression_pattern == 0 && line[i] == '.') {
+				} else if (expression_pattern == NOT_PARSED && line[i] == '.') {
 					begin = i;
-					expression_pattern = 2;
-				} else if (expression_pattern == 2 && end < 0 && (line[i] == ' ' || line[i] == '\t')) {
+					expression_pattern = COLOR_NAME;
+				} else if (expression_pattern == COLOR_NAME && end < 0 && (line[i] == ' ' || line[i] == '\t')) {
 					// including '.' and spaces
 					continue;
-				} else if (expression_pattern == 2 && !(line[i] == '_' || ('A' <= line[i] && line[i] <= 'Z'))) { // Godot4.x color constant style
+				} else if (expression_pattern == COLOR_NAME && !(line[i] == '_' || ('A' <= line[i] && line[i] <= 'Z'))) { // Godot4.x color constant style
 					end = i;
 
 					break;
@@ -1749,7 +1753,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 			}
 
 			switch (expression_pattern) {
-				case 1: { // Color(float,float,float) or Color(float,float,float,float)
+				case RGBA_PARAMETER: {
 					color_args = line.substr(begin, end - begin);
 					String stripped = color_args.replace(" ", "").replace("\t", "").replace("(", "").replace(")", "");
 					Vector<float> color = stripped.split_floats(",");
@@ -1758,7 +1762,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 						color_picker->set_pick_color(Color(color[0], color[1], color[2], alpha));
 					}
 				} break;
-				case 2: { // Color.COLOR_NAME
+				case COLOR_NAME: {
 					if (end < 0) {
 						end = line.length();
 					}
