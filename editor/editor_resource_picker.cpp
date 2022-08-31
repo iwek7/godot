@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "editor_resource_picker.h"
+#include <core/core_string_names.h>
 
 #include "editor/audio_stream_preview.h"
 #include "editor/editor_file_dialog.h"
@@ -148,9 +149,8 @@ void EditorResourcePicker::_file_selected(const String &p_path) {
 		}
 	}
 
-	edited_resource = loaded_resource;
+	_set_edited_resource(loaded_resource);
 	emit_signal(SNAME("resource_changed"), edited_resource);
-	_update_resource();
 }
 
 void EditorResourcePicker::_file_quick_selected() {
@@ -321,9 +321,8 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 		} break;
 
 		case OBJ_MENU_CLEAR: {
-			edited_resource = Ref<Resource>();
+			_set_edited_resource(Ref<Resource>());
 			emit_signal(SNAME("resource_changed"), edited_resource);
-			_update_resource();
 		} break;
 
 		case OBJ_MENU_MAKE_UNIQUE: {
@@ -334,9 +333,8 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 			Ref<Resource> unique_resource = edited_resource->duplicate();
 			ERR_FAIL_COND(unique_resource.is_null());
 
-			edited_resource = unique_resource;
+		 	_set_edited_resource(unique_resource);
 			emit_signal(SNAME("resource_changed"), edited_resource);
-			_update_resource();
 		} break;
 
 		case OBJ_MENU_MAKE_UNIQUE_RECURSIVE: {
@@ -347,9 +345,8 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 			Ref<Resource> unique_resource = edited_resource->duplicate(true);
 			ERR_FAIL_COND(unique_resource.is_null());
 
-			edited_resource = unique_resource;
+			_set_edited_resource(unique_resource);
 			emit_signal(SNAME("resource_changed"), edited_resource);
-			_update_resource();
 		} break;
 
 		case OBJ_MENU_SAVE: {
@@ -364,7 +361,7 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 		} break;
 
 		case OBJ_MENU_PASTE: {
-			edited_resource = EditorSettings::get_singleton()->get_resource_clipboard();
+			_set_edited_resource(EditorSettings::get_singleton()->get_resource_clipboard());
 			if (edited_resource->is_built_in() && EditorNode::get_singleton()->get_edited_scene() &&
 					edited_resource->get_path().get_slice("::", 0) != EditorNode::get_singleton()->get_edited_scene()->get_scene_file_path()) {
 				// Automatically make resource unique if it belongs to another scene.
@@ -373,7 +370,6 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 			}
 
 			emit_signal(SNAME("resource_changed"), edited_resource);
-			_update_resource();
 		} break;
 
 		case OBJ_MENU_SHOW_IN_FILE_SYSTEM: {
@@ -396,9 +392,8 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 				Vector<Ref<EditorResourceConversionPlugin>> conversions = EditorNode::get_singleton()->find_resource_conversion_plugin(edited_resource);
 				ERR_FAIL_INDEX(to_type, conversions.size());
 
-				edited_resource = conversions[to_type]->convert(edited_resource);
+				_set_edited_resource(conversions[to_type]->convert(edited_resource));
 				emit_signal(SNAME("resource_changed"), edited_resource);
-				_update_resource();
 				break;
 			}
 
@@ -428,9 +423,8 @@ void EditorResourcePicker::_edit_menu_cbk(int p_which) {
 
 			EditorNode::get_editor_data().instantiate_object_properties(obj);
 
-			edited_resource = Ref<Resource>(resp);
+			_set_edited_resource(Ref<Resource>(resp));
 			emit_signal(SNAME("resource_changed"), edited_resource);
-			_update_resource();
 		} break;
 	}
 }
@@ -723,9 +717,8 @@ void EditorResourcePicker::drop_data_fw(const Point2 &p_point, const Variant &p_
 			}
 		}
 
-		edited_resource = dropped_resource;
+		_set_edited_resource(dropped_resource);
 		emit_signal(SNAME("resource_changed"), edited_resource);
-		_update_resource();
 	}
 }
 
@@ -838,8 +831,7 @@ Vector<String> EditorResourcePicker::get_allowed_types() const {
 
 void EditorResourcePicker::set_edited_resource(Ref<Resource> p_resource) {
 	if (!p_resource.is_valid()) {
-		edited_resource = Ref<Resource>();
-		_update_resource();
+		_set_edited_resource(Ref<Resource>());
 		return;
 	}
 
@@ -860,8 +852,7 @@ void EditorResourcePicker::set_edited_resource(Ref<Resource> p_resource) {
 		}
 	}
 
-	edited_resource = p_resource;
-	_update_resource();
+	_set_edited_resource(p_resource);
 }
 
 Ref<Resource> EditorResourcePicker::get_edited_resource() {
@@ -904,6 +895,17 @@ void EditorResourcePicker::_ensure_resource_menu() {
 	edit_menu->connect("popup_hide", callable_mp((BaseButton *)edit_button, &BaseButton::set_pressed).bind(false));
 }
 
+void EditorResourcePicker::_set_edited_resource(Ref<Resource> resource) {
+	if (resource == edited_resource) {
+		return;
+	}
+	edited_resource = resource;
+	_update_resource();
+	if (resource.is_valid()) {
+		resource->connect(CoreStringNames::get_singleton()->changed, callable_mp(this, &EditorResourcePicker::_update_resource));
+	}
+}
+
 EditorResourcePicker::EditorResourcePicker(bool p_hide_assign_button_controls) {
 	assign_button = memnew(Button);
 	assign_button->set_flat(true);
@@ -934,6 +936,7 @@ EditorResourcePicker::EditorResourcePicker(bool p_hide_assign_button_controls) {
 
 	add_theme_constant_override("separation", 0);
 }
+
 
 // EditorScriptPicker
 

@@ -101,6 +101,8 @@ class EditorResourcePicker : public HBoxContainer {
 
 	void _ensure_resource_menu();
 
+	void _set_edited_resource(Ref<Resource> resource);
+
 protected:
 	virtual void _update_resource();
 

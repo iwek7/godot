@@ -205,10 +205,9 @@ void GradientEdit::gui_input(const Ref<InputEvent> &p_event) {
 				break;
 			}
 		}
-
-		emit_signal(SNAME("ramp_changed"));
 	}
 
+	// finish grabbing
 	if (mb.is_valid() && mb->get_button_index() == MouseButton::LEFT && !mb->is_pressed()) {
 		if (grabbing) {
 			grabbing = false;
@@ -242,10 +241,8 @@ void GradientEdit::gui_input(const Ref<InputEvent> &p_event) {
 					if (temp_ofs < smallest_ofs) {
 						smallest_ofs = temp_ofs;
 						nearest_point = i;
-						if (found) {
-							break;
-						}
 						found = true;
+						break;
 					}
 				}
 			}
@@ -279,9 +276,6 @@ void GradientEdit::gui_input(const Ref<InputEvent> &p_event) {
 				break;
 			}
 		}
-
-		emit_signal(SNAME("ramp_changed"));
-
 		queue_redraw();
 	}
 }
